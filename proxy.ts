@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyToken } from './lib/auth/jwt'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Protect /dashboard and /admin routes
   const { pathname } = request.nextUrl
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
