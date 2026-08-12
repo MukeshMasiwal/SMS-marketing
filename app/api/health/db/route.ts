@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/connection";
+import { User } from "@/lib/db/models/User";
 import mongoose from "mongoose";
 
 export async function GET() {
@@ -18,12 +19,14 @@ export async function GET() {
       );
     }
 
-    const dbName = conn.connection.db?.databaseName || conn.connection.name || "sms-marketing";
+    const dbName = conn.connection.db?.databaseName || conn.connection.name || "test";
+    const userCount = await User.countDocuments();
 
     return NextResponse.json({
       success: true,
       mongodb: "connected",
-      database: dbName
+      database: dbName,
+      userCount
     });
   } catch (err: unknown) {
     const safeError = err instanceof Error ? err.message : "Failed to connect to database";
