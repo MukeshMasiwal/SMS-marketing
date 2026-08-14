@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Shield, LayoutDashboard, Users, Megaphone, Package } from "lucide-react";
+import { Menu, Shield, LayoutDashboard, Users, Megaphone, Package, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AdminLogoutButton } from "./admin-logout-button";
 
 const navigation = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
@@ -53,10 +54,12 @@ export function AdminMobileNav() {
           })}
         </nav>
         
-        <div className="p-4 border-t border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
-            Exit Admin
+        <div className="p-4 border-t border-white/10 space-y-1">
+          <Link href="/" className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span>Exit Admin</span>
           </Link>
+          <AdminLogoutButton />
         </div>
       </SheetContent>
     </Sheet>

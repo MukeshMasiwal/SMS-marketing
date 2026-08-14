@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { IGroup } from "@/lib/db/models/Group";
+import { ImportContactsDialog } from "@/components/messages/import-contacts-dialog";
+import { Upload } from "lucide-react";
 
 interface GroupFormDialogProps {
   open: boolean;
@@ -26,6 +28,8 @@ interface GroupFormDialogProps {
 
 export function GroupFormDialog({ open, onOpenChange, group, onSuccess }: GroupFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdGroupForImport, setCreatedGroupForImport] = useState<{ id: string; name: string } | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const form = useForm<CreateGroupInput>({
     resolver: zodResolver(CreateGroupSchema) as unknown as import("react-hook-form").Resolver<CreateGroupInput>,
@@ -42,24 +46,27 @@ export function GroupFormDialog({ open, onOpenChange, group, onSuccess }: GroupF
     });
   }, [group, form]);
 
+  const saveGroup = async (data: CreateGroupInput): Promise<any> => {
+    const url = group ? `/api/groups/${group._id}` : "/api/groups";
+    const method = group ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error?.message || "Invalid group details.");
+    }
+    return json.data?.group || json.group;
+  };
+
   const onSubmit = async (data: CreateGroupInput) => {
     setIsSubmitting(true);
     try {
-      const url = group ? `/api/groups/${group._id}` : "/api/groups";
-      const method = group ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const json = await res.json();
-
-      if (!json.success) {
-        throw new Error(json.error?.message || "Invalid group details.");
-      }
-
+      await saveGroup(data);
       toast.success(group ? "Group updated successfully." : "Group created successfully.");
       onSuccess();
       onOpenChange(false);
@@ -74,39 +81,92 @@ export function GroupFormDialog({ open, onOpenChange, group, onSuccess }: GroupF
     }
   };
 
+  const handleCreateAndImport = async () => {
+    const valid = await form.trigger();
+    if (!valid) return;
+
+    setIsSubmitting(true);
+    try {
+      const data = form.getValues();
+      const savedGroup = await saveGroup(data);
+      toast.success("Group created! Select file to import contacts.");
+      onSuccess();
+      onOpenChange(false);
+
+      const gId = String(savedGroup._id);
+      const gName = savedGroup.name;
+      setCreatedGroupForImport({ id: gId, name: gName });
+      setIsImportOpen(true);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || "Unable to create group.");
+      } else {
+        toast.error("Unable to create group.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-zinc-950 text-zinc-50 border-zinc-800">
-        <DialogHeader>
-          <DialogTitle>{group ? "Edit Group" : "Add Group"}</DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            {group ? "Make changes to the group here." : "Create a new group to organize your contacts."}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-zinc-200 text-sm font-medium">Name</label>
-            <Input placeholder="VIP Customers" className="bg-zinc-900 border-zinc-800" {...form.register("name")} />
-            {form.formState.errors.name && <p className="text-red-400 text-sm">{form.formState.errors.name.message}</p>}
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-zinc-200 text-sm font-medium">Description (Optional)</label>
-            <Input placeholder="Highest spending customers" className="bg-zinc-900 border-zinc-800" {...form.register("description")} />
-            {form.formState.errors.description && <p className="text-red-400 text-sm">{form.formState.errors.description.message}</p>}
-          </div>
-          
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[425px] bg-zinc-950 text-zinc-50 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle>{group ? "Edit Group" : "Create Group"}</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {group ? "Make changes to the group here." : "Create a new group to organize your contacts."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-zinc-200 text-sm font-medium">Name</label>
+              <Input placeholder="VIP Customers" className="bg-zinc-900 border-zinc-800" {...form.register("name")} />
+              {form.formState.errors.name && <p className="text-red-400 text-sm">{form.formState.errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-zinc-200 text-sm font-medium">Description (Optional)</label>
+              <Input placeholder="Highest spending customers" className="bg-zinc-900 border-zinc-800" {...form.register("description")} />
+              {form.formState.errors.description && <p className="text-red-400 text-sm">{form.formState.errors.description.message}</p>}
+            </div>
+
+            <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+              {!group && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCreateAndImport}
+                  disabled={isSubmitting}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 gap-1.5"
+                >
+                  <Upload className="h-4 w-4 text-indigo-400" />
+                  <span>Import Contacts</span>
+                </Button>
+              )}
+              <div className="flex justify-end gap-2 ml-auto">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium">
+                  {isSubmitting ? "Saving..." : "Create Group"}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {createdGroupForImport && (
+        <ImportContactsDialog
+          open={isImportOpen}
+          onOpenChange={setIsImportOpen}
+          groupId={createdGroupForImport.id}
+          groupName={createdGroupForImport.name}
+          onImportSuccess={onSuccess}
+        />
+      )}
+    </>
   );
 }

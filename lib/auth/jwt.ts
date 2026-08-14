@@ -1,28 +1,19 @@
-import { jwtVerify, SignJWT } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback_secret_for_development_only"
-);
+import { verifyAccessToken, generateAccessToken } from "../../server/services/tokenService";
 
 export interface SessionPayload {
   userId: string;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "user" | "admin";
 }
 
 export async function createToken(payload: SessionPayload): Promise<string> {
-  const jwt = await new SignJWT(payload as unknown as Record<string, unknown>)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("24h")
-    .sign(JWT_SECRET);
-  return jwt;
+  return generateAccessToken(payload.userId, payload.role);
 }
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
-  }
+  const verified = verifyAccessToken(token);
+  if (!verified) return null;
+  return {
+    userId: verified.sub,
+    role: (verified.role || "USER").toUpperCase() as "USER" | "ADMIN",
+  };
 }

@@ -1,19 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Megaphone, Search } from "lucide-react";
+import { Plus, Megaphone, Search, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CampaignsTable, ICampaignListing } from "@/components/campaigns/campaigns-table";
 import { CampaignFormDialog } from "@/components/campaigns/campaign-form-dialog";
+import { GroupFormDialog } from "@/components/groups/group-form-dialog";
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<ICampaignListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<any>(null);
 
   const fetchCampaigns = useCallback(async () => {
@@ -22,7 +24,7 @@ export default function CampaignsPage() {
       const res = await fetch("/api/campaigns");
       const data = await res.json();
       if (data.success) {
-        setCampaigns(data.data.campaigns);
+        setCampaigns(data.data?.campaigns || data.campaigns || []);
       } else {
         setError(data.error?.message || "Failed to load campaigns");
       }
@@ -51,61 +53,52 @@ export default function CampaignsPage() {
     if (!res.ok) {
       throw new Error(data.error?.message || "Failed to save campaign");
     }
-    
+
     await fetchCampaigns();
-    return data.data.campaign;
+    return data.data?.campaign || data.campaign;
   };
 
   const handleSendNow = async (formData: any) => {
-    // 1. Create or Update the draft
     const savedCampaign = await handleCreateOrUpdate(formData);
-    
-    // 2. Trigger Send
+
     const res = await fetch(`/api/campaigns/${savedCampaign._id}/send`, {
       method: "POST",
     });
-    
+
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error?.message || "Failed to send campaign");
     }
-    
+
     await fetchCampaigns();
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this draft campaign?")) return;
-    
     const res = await fetch(`/api/campaigns/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setCampaigns(campaigns.filter((c) => c._id !== id));
-    } else {
-      const data = await res.json();
-      alert(data.error?.message || "Failed to delete");
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error?.message || "Failed to delete campaign");
     }
+    setCampaigns((prev) => prev.filter((c) => c._id !== id));
   };
 
   const handleSendFromTable = async (id: string) => {
-    if (!confirm("Are you sure you want to send this campaign now?")) return;
-    
     const res = await fetch(`/api/campaigns/${id}/send`, { method: "POST" });
     if (res.ok) {
       await fetchCampaigns();
     } else {
       const data = await res.json();
-      alert(data.error?.message || "Failed to send campaign");
+      throw new Error(data.error?.message || "Failed to send campaign");
     }
   };
 
   const handleCancelFromTable = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this campaign? Some messages may have already been sent.")) return;
-    
     const res = await fetch(`/api/campaigns/${id}/cancel`, { method: "POST" });
     if (res.ok) {
       await fetchCampaigns();
     } else {
       const data = await res.json();
-      alert(data.error?.message || "Failed to cancel campaign");
+      throw new Error(data.error?.message || "Failed to cancel campaign");
     }
   };
 
@@ -114,16 +107,19 @@ export default function CampaignsPage() {
     setIsFormOpen(true);
   };
 
+  const openAddGroupDialog = () => {
+    setIsGroupDialogOpen(true);
+  };
+
   const openEditDialog = async (campaign: ICampaignListing) => {
-    // Fetch full campaign details for editing (need the target IDs)
     const res = await fetch(`/api/campaigns/${campaign._id}`);
     const data = await res.json();
     if (data.success) {
-      const c = data.data.campaign;
+      const c = data.data?.campaign || data.campaign;
       setEditingCampaign({
         ...c,
-        targetGroupIds: c.targetGroupIds.map((g: any) => g._id),
-        targetContactIds: c.targetContactIds.map((con: any) => con._id),
+        targetGroupIds: (c.targetGroupIds || []).map((g: any) => (typeof g === "object" ? g._id : g)),
+        targetContactIds: (c.targetContactIds || []).map((con: any) => (typeof con === "object" ? con._id : con)),
       });
       setIsFormOpen(true);
     }
@@ -132,9 +128,9 @@ export default function CampaignsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-  const filteredCampaigns = campaigns.filter(c => {
+  const filteredCampaigns = campaigns.filter((c) => {
     const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
+    const matchesStatus = statusFilter === "ALL" || String(c.status).toUpperCase() === statusFilter.toUpperCase();
     return matchesSearch && matchesStatus;
   });
 
@@ -145,9 +141,15 @@ export default function CampaignsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Campaigns</h1>
           <p className="text-zinc-400 mt-1">Manage and send SMS marketing campaigns.</p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
-          <Plus className="mr-2 h-4 w-4" /> Create Campaign
-        </Button>
+        <div className="flex items-center gap-3 shrink-0">
+          <Button onClick={openAddGroupDialog} variant="outline" className="border-zinc-800 bg-zinc-900 text-zinc-100 hover:bg-zinc-800">
+            <UsersRound className="mr-2 h-4 w-4 text-indigo-400" />
+            + Add Group
+          </Button>
+          <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Plus className="mr-2 h-4 w-4" /> Create Campaign
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -197,7 +199,7 @@ export default function CampaignsPage() {
               </Select>
             </div>
           </div>
-          
+
           {filteredCampaigns.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 py-12 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900/50 text-zinc-400 mb-4">
@@ -212,9 +214,9 @@ export default function CampaignsPage() {
               </Button>
             </div>
           ) : (
-            <CampaignsTable 
-              campaigns={filteredCampaigns} 
-              onDelete={handleDelete} 
+            <CampaignsTable
+              campaigns={filteredCampaigns}
+              onDelete={handleDelete}
               onSend={handleSendFromTable}
               onCancel={handleCancelFromTable}
               onEdit={openEditDialog}
@@ -229,6 +231,12 @@ export default function CampaignsPage() {
         campaign={editingCampaign}
         onSave={handleCreateOrUpdate}
         onSendNow={handleSendNow}
+      />
+
+      <GroupFormDialog
+        open={isGroupDialogOpen}
+        onOpenChange={setIsGroupDialogOpen}
+        onSuccess={fetchCampaigns}
       />
     </div>
   );

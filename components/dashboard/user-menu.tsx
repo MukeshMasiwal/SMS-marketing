@@ -13,17 +13,15 @@ import { User, Settings, LogOut } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 export function UserMenu() {
-  const router = useRouter();
-  
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
     } catch (error) {
       console.error("Logout failed", error);
+    } finally {
+      window.location.href = "/";
     }
   };
 

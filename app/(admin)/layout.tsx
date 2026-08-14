@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, LayoutDashboard, Megaphone, Package, LogOut, Shield } from "lucide-react";
+import { Users, LayoutDashboard, Megaphone, Package, Shield, ArrowLeft } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
+import { AdminLogoutButton } from "@/components/admin/admin-logout-button";
 
 export default async function AdminLayout({
   children,
@@ -61,10 +62,12 @@ export default async function AdminLayout({
           </Link>
         </nav>
         
-        <div className="p-4 border-t border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors mb-2">
-            Exit Admin
+        <div className="p-4 border-t border-white/10 space-y-1">
+          <Link href="/" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span>Exit Admin</span>
           </Link>
+          <AdminLogoutButton />
         </div>
       </aside>
 

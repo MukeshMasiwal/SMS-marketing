@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { ManageGroupContactsDialog } from "@/components/groups/manage-group-contacts-dialog";
+import { ImportContactsDialog } from "@/components/messages/import-contacts-dialog";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Plus, AlertCircle, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { IContact } from "@/lib/db/models/Contact";
 
@@ -126,10 +127,17 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           
-          <Button onClick={() => setIsAddDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Contacts
-          </Button>
+          <div className="flex items-center gap-3">
+            <ImportContactsDialog 
+              groupId={groupId}
+              groupName={group?.name}
+              onImportSuccess={fetchGroup}
+            />
+            <Button onClick={() => setIsAddDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Contacts
+            </Button>
+          </div>
         </div>
       </div>
       

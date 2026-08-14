@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import serverMongoose from "../server/node_modules/mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import path from "path";
@@ -56,12 +57,15 @@ const DEFAULT_PACKAGES = [
   },
 ];
 
-const DEMO_CONTACTS_DATA = [
-  { name: "Rahul Sharma", phone: "+919876543210", email: "rahul@example.com", tags: ["Lead", "VIP"] },
-  { name: "Priya Verma", phone: "+919876543211", email: "priya@example.com", tags: ["Lead"] },
-  { name: "Aman Joshi", phone: "+919876543212", email: "aman@example.com", tags: ["Customer"] },
-  { name: "Neha Singh", phone: "+919876543213", email: "neha@example.com", tags: ["Subscriber"] },
-  { name: "Rohan Mehta", phone: "+919876543214", email: "rohan@example.com", tags: ["VIP"] },
+const DEMO_NAMES = [
+  "Rahul Sharma", "Priya Verma", "Amit Joshi", "Ananya Gupta", "Vikram Malhotra",
+  "Neha Singh", "Rohan Mehta", "Siddharth Rao", "Pooja Patel", "Karan Kapoor",
+  "Sneha Nair", "Aditya Bhat", "Meera Sen", "Arjun Reddy", "Kavya Iyer",
+  "Deepak Kumar", "Divya Agarwal", "Manish Tiwari", "Shweta Pandey", "Rajesh Das",
+  "Tarun Saxena", "Nisha Jain", "Abhishek Mishra", "Tanvi Shah", "Gaurav Verma",
+  "Ritu Chaudhary", "Varun Sharma", "Preeti Kulkarni", "Sanjay Dutt", "Ankita Roy",
+  "Harish Pillai", "Simran Gill", "Nikhil Chopra", "Swati Bose", "Alok Pandey",
+  "Kirti Deshmukh", "Yash Sethi", "Bhavna Joshi", "Sameer Bhatt", "Ishita Saxena"
 ];
 
 async function seed() {
@@ -72,10 +76,12 @@ async function seed() {
   }
 
   console.log("🔄 Attempting MongoDB connection...");
-  console.log("🔗 Connecting to MongoDB Atlas...");
   const conn = await mongoose.connect(MONGODB_URI);
+  if (serverMongoose !== mongoose && serverMongoose.connection?.readyState !== 1) {
+    await serverMongoose.connect(MONGODB_URI);
+  }
   const dbName = conn.connection.db?.databaseName || conn.connection.name || "sms-marketing";
-  console.log(`✅ MongoDB Atlas connected (${dbName})`);
+  console.log(`✅ MongoDB connected (${dbName})`);
 
   // 1. Seed Packages
   console.log("\nSeeding packages...");
@@ -84,130 +90,298 @@ async function seed() {
     const doc = await Package.findOneAndUpdate(
       { name: pkg.name },
       { $set: pkg },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true, returnDocument: "after" }
     );
     packageDocs[pkg.name] = doc;
   }
-  console.log(`✓ ${Object.keys(packageDocs).length} packages seeded successfully`);
+  console.log(`✓ ${Object.keys(packageDocs).length} packages ready`);
 
-  // 2. Hash Passwords
-  const adminPasswordHash = await bcrypt.hash("Admin@12345", 10);
-  const userPasswordHash = await bcrypt.hash("User@12345", 10);
+  // Helper function for idempotent demo user seeding
+  async function seedDemoAccount(
+    email: string,
+    name: string,
+    rawPass: string,
+    targetRole: "user" | "admin",
+    defaultSmsUsed: number
+  ) {
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    let passwordHash = "";
+    if (existing && existing.passwordHash) {
+      const isValid = await bcrypt.compare(rawPass, existing.passwordHash);
+      if (isValid) {
+        passwordHash = existing.passwordHash;
+      } else {
+        passwordHash = await bcrypt.hash(rawPass, 10);
+      }
+    } else {
+      passwordHash = await bcrypt.hash(rawPass, 10);
+    }
+
+    const doc = await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        $set: {
+          name,
+          email: email.toLowerCase(),
+          passwordHash,
+          role: existing ? existing.role : targetRole,
+          emailVerified: true,
+          packageId: packageDocs["Free"]?._id,
+          smsUsed: existing?.smsUsed ?? defaultSmsUsed,
+          isActive: true,
+        },
+      },
+      { upsert: true, returnDocument: "after" }
+    );
+
+    console.log(`✓ Seeded ${name} (${doc.email}): role=${doc.role}, emailVerified=${doc.emailVerified}`);
+    return doc;
+  }
 
   // 3. Seed Admin User
   console.log("\nSeeding admin account...");
   const adminEmail = "admin@example.com";
-  const adminUser = await User.findOneAndUpdate(
-    { email: adminEmail },
-    {
-      $set: {
-        name: "Demo Admin",
-        email: adminEmail,
-        passwordHash: adminPasswordHash,
-        role: "ADMIN",
-        packageId: packageDocs["Free"]?._id,
-        smsUsed: 0,
-        isActive: true,
-      },
-    },
-    { upsert: true, returnDocument: 'after' }
-  );
-  console.log(`✓ Admin user ready: ${adminUser.email} (ID: ${adminUser._id})`);
+  const adminUser = await seedDemoAccount(adminEmail, "Demo Admin", "Admin@12345", "admin", 0);
 
   // 4. Seed Normal User
   console.log("Seeding demo normal user account...");
   const userEmail = "user@example.com";
-  const demoUser = await User.findOneAndUpdate(
-    { email: userEmail },
-    {
-      $set: {
-        name: "Demo User",
-        email: userEmail,
-        passwordHash: userPasswordHash,
-        role: "USER",
-        packageId: packageDocs["Free"]?._id,
-        smsUsed: 5,
-        isActive: true,
-      },
-    },
-    { upsert: true, returnDocument: 'after' }
-  );
-  console.log(`✓ Demo user ready: ${demoUser.email} (ID: ${demoUser._id})`);
+  const demoUser = await seedDemoAccount(userEmail, "Demo User", "User@12345", "user", 25);
 
-  // 5. Seed Contacts for Demo User
-  console.log("\nSeeding demo contacts for user@example.com...");
-  const contactIds: mongoose.Types.ObjectId[] = [];
-  for (const contactData of DEMO_CONTACTS_DATA) {
-    const contactDoc = await Contact.findOneAndUpdate(
-      { userId: demoUser._id, phone: contactData.phone },
+  // 5. Seed 40 Demo Contacts (+919800000001 through +919800000040)
+  console.log("\nSeeding 40 realistic demo contacts...");
+  const contactDocs: any[] = [];
+  for (let i = 0; i < 40; i++) {
+    const numStr = String(i + 1).padStart(4, "0");
+    const phone = `+91980000${numStr}`;
+    const name = DEMO_NAMES[i];
+    const firstName = name.split(" ")[0].toLowerCase();
+    const email = `${firstName}.${numStr}@example.com`;
+
+    let tags = ["Customer"];
+    if (i < 10) tags = ["VIP", "Customer"];
+    else if (i >= 10 && i < 25) tags = ["Lead"];
+    else if (i >= 25 && i < 35) tags = ["Subscriber"];
+
+    const doc = await Contact.findOneAndUpdate(
+      { userId: demoUser._id, phone },
       {
         $set: {
           userId: demoUser._id,
-          name: contactData.name,
-          phone: contactData.phone,
-          email: contactData.email,
-          tags: contactData.tags,
+          name,
+          phone,
+          email,
+          tags,
           status: "SUBSCRIBED",
         },
       },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true, returnDocument: "after" }
     );
-    contactIds.push(contactDoc._id as mongoose.Types.ObjectId);
+    contactDocs.push(doc);
   }
-  console.log(`✓ ${contactIds.length} demo contacts seeded`);
+  console.log(`✓ ${contactDocs.length} demo contacts seeded`);
 
-  // 6. Seed Contact Group "Marketing Leads"
-  console.log("Seeding contact group 'Marketing Leads'...");
-  const group = await Group.findOneAndUpdate(
-    { userId: demoUser._id, name: "Marketing Leads" },
+  // 6. Seed 5 Groups
+  console.log("\nSeeding 5 demo groups...");
+
+  // Customers (Contacts 0 to 19)
+  const customersGroup = await Group.findOneAndUpdate(
+    { userId: demoUser._id, name: "Customers" },
     {
       $set: {
         userId: demoUser._id,
-        name: "Marketing Leads",
-        description: "Primary group for SMS marketing lead campaigns",
-        contactIds: contactIds,
+        name: "Customers",
+        description: "Active purchasing customers",
+        contactIds: contactDocs.slice(0, 20).map((c) => c._id),
       },
     },
-    { upsert: true, returnDocument: 'after' }
+    { upsert: true, returnDocument: "after" }
   );
-  console.log(`✓ Group 'Marketing Leads' seeded (ID: ${group._id})`);
 
-  // 7. Seed Campaign "Welcome Campaign"
-  console.log("Seeding demo campaign 'Welcome Campaign'...");
-  const campaign = await Campaign.findOneAndUpdate(
+  // Leads (Contacts 10 to 24)
+  const leadsGroup = await Group.findOneAndUpdate(
+    { userId: demoUser._id, name: "Leads" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "Leads",
+        description: "Potential lead prospects",
+        contactIds: contactDocs.slice(10, 25).map((c) => c._id),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // VIP Customers (Contacts 0 to 9)
+  const vipGroup = await Group.findOneAndUpdate(
+    { userId: demoUser._id, name: "VIP Customers" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "VIP Customers",
+        description: "High-value VIP accounts",
+        contactIds: contactDocs.slice(0, 10).map((c) => c._id),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // New Subscribers (Contacts 25 to 34)
+  const subscribersGroup = await Group.findOneAndUpdate(
+    { userId: demoUser._id, name: "New Subscribers" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "New Subscribers",
+        description: "Recently subscribed users",
+        contactIds: contactDocs.slice(25, 35).map((c) => c._id),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // Inactive Customers (Contacts 35 to 39)
+  const inactiveGroup = await Group.findOneAndUpdate(
+    { userId: demoUser._id, name: "Inactive Customers" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "Inactive Customers",
+        description: "Dormant contacts requiring re-engagement",
+        contactIds: contactDocs.slice(35, 40).map((c) => c._id),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  console.log("✓ 5 Groups seeded (Customers, Leads, VIP Customers, New Subscribers, Inactive Customers)");
+
+  // 7. Seed 5 Campaigns with mixed statuses
+  console.log("\nSeeding 5 demo campaigns...");
+
+  // 1. Diwali Special Offer (completed)
+  const campaign1 = await Campaign.findOneAndUpdate(
+    { userId: demoUser._id, name: "Diwali Special Offer" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "Diwali Special Offer",
+        message: "Hi {{name}}, enjoy 30% off this Diwali! Use code DIWALI30 today.",
+        targetType: "GROUP",
+        targetGroupIds: [customersGroup._id],
+        targetContactIds: [],
+        status: "completed",
+        recipientCount: 20,
+        characterCount: 68,
+        segmentCount: 1,
+        encoding: "GSM-7",
+        startedAt: new Date(Date.now() - 86400000 * 3),
+        completedAt: new Date(Date.now() - 86400000 * 3 + 120000),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // 2. New Product Launch (completed)
+  const campaign2 = await Campaign.findOneAndUpdate(
+    { userId: demoUser._id, name: "New Product Launch" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "New Product Launch",
+        message: "Hi {{name}}, VIP exclusive preview of our new product lineup!",
+        targetType: "GROUP",
+        targetGroupIds: [vipGroup._id],
+        targetContactIds: [],
+        status: "completed",
+        recipientCount: 10,
+        characterCount: 61,
+        segmentCount: 1,
+        encoding: "GSM-7",
+        startedAt: new Date(Date.now() - 86400000 * 2),
+        completedAt: new Date(Date.now() - 86400000 * 2 + 60000),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // 3. Weekend Flash Sale (draft)
+  const campaign3 = await Campaign.findOneAndUpdate(
+    { userId: demoUser._id, name: "Weekend Flash Sale" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "Weekend Flash Sale",
+        message: "Hi {{name}}, weekend flash sale starts tomorrow! Use code FLASH20 today.",
+        targetType: "GROUP",
+        targetGroupIds: [leadsGroup._id],
+        targetContactIds: [],
+        status: "draft",
+        recipientCount: 15,
+        characterCount: 75,
+        segmentCount: 1,
+        encoding: "GSM-7",
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // 4. Customer Appreciation (scheduled)
+  const campaign4 = await Campaign.findOneAndUpdate(
+    { userId: demoUser._id, name: "Customer Appreciation" },
+    {
+      $set: {
+        userId: demoUser._id,
+        name: "Customer Appreciation",
+        message: "Hi {{name}}, thank you for being a valued customer! Enjoy a special reward.",
+        targetType: "GROUP",
+        targetGroupIds: [customersGroup._id],
+        targetContactIds: [],
+        status: "scheduled",
+        recipientCount: 20,
+        characterCount: 78,
+        segmentCount: 1,
+        encoding: "GSM-7",
+        scheduledAt: new Date(Date.now() + 86400000 * 2),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  // 5. Welcome Campaign (failed)
+  const campaign5 = await Campaign.findOneAndUpdate(
     { userId: demoUser._id, name: "Welcome Campaign" },
     {
       $set: {
         userId: demoUser._id,
         name: "Welcome Campaign",
-        message: "Welcome to our SMS marketing platform!",
+        message: "Welcome {{name}}! Thank you for joining us.",
         targetType: "GROUP",
-        targetGroupIds: [group._id],
+        targetGroupIds: [subscribersGroup._id],
         targetContactIds: [],
-        status: "COMPLETED",
-        recipientCount: DEMO_CONTACTS_DATA.length,
-        startedAt: new Date(Date.now() - 3600000),
-        completedAt: new Date(),
+        status: "failed",
+        recipientCount: 10,
+        characterCount: 42,
+        segmentCount: 1,
+        encoding: "GSM-7",
+        startedAt: new Date(Date.now() - 86400000),
       },
     },
-    { upsert: true, returnDocument: 'after' }
+    { upsert: true, returnDocument: "after" }
   );
-  console.log(`✓ Campaign 'Welcome Campaign' seeded (ID: ${campaign._id})`);
 
-  // 8. Seed Message Log Records
-  console.log("Seeding demo message logs...");
-  const messageStatuses: Array<"DELIVERED" | "SENT" | "FAILED"> = [
-    "DELIVERED",
-    "DELIVERED",
-    "DELIVERED",
-    "SENT",
-    "FAILED",
-  ];
+  console.log("✓ 5 Campaigns seeded (Diwali Special Offer, New Product Launch, Weekend Flash Sale, Customer Appreciation, Welcome Campaign)");
 
-  for (let i = 0; i < DEMO_CONTACTS_DATA.length; i++) {
-    const contact = DEMO_CONTACTS_DATA[i];
-    const status = messageStatuses[i];
-    const messageId = `msg_seed_demo_${i + 1}`;
+  // 8. Seed Message Logs for Completed and Failed Campaigns (without triggering Twilio)
+  console.log("\nSeeding message delivery logs...");
+  let seededMsgCount = 0;
+
+  // Diwali Special Offer messages (20 contacts)
+  const c1Contacts = contactDocs.slice(0, 20);
+  for (let i = 0; i < c1Contacts.length; i++) {
+    const c = c1Contacts[i];
+    const messageId = `msg_seed_c1_${c._id}`;
+    const status = i === 19 ? "FAILED" : "DELIVERED";
 
     await Message.findOneAndUpdate(
       { messageId },
@@ -215,30 +389,80 @@ async function seed() {
         $set: {
           messageId,
           userId: demoUser._id,
-          campaignId: campaign._id,
-          recipient: contact.phone,
-          message: "Welcome to our SMS marketing platform!",
+          campaignId: campaign1._id,
+          recipient: c.phone,
+          message: campaign1.message,
           status,
           provider: "DUMMY",
-          errorMessage: status === "FAILED" ? "Simulated network failure" : undefined,
+          errorMessage: status === "FAILED" ? "Simulated network timeout" : undefined,
         },
       },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true }
     );
+    seededMsgCount++;
   }
-  console.log("✓ 5 demo message records seeded");
 
-  // 9. Verification Query
-  console.log("\n🔍 Verifying seeded users in User collection...");
-  const allUsers = await User.find({}).select("email role isActive createdAt");
-  console.log(`✓ Found ${allUsers.length} user(s) in database:`);
-  allUsers.forEach((u) => {
-    console.log(`   - Email: ${u.email} | Role: ${u.role} | Active: ${u.isActive}`);
-  });
+  // New Product Launch messages (10 contacts)
+  const c2Contacts = contactDocs.slice(0, 10);
+  for (let i = 0; i < c2Contacts.length; i++) {
+    const c = c2Contacts[i];
+    const messageId = `msg_seed_c2_${c._id}`;
 
-  console.log("\n🎉 Seed completed successfully!");
+    await Message.findOneAndUpdate(
+      { messageId },
+      {
+        $set: {
+          messageId,
+          userId: demoUser._id,
+          campaignId: campaign2._id,
+          recipient: c.phone,
+          message: campaign2.message,
+          status: "DELIVERED",
+          provider: "DUMMY",
+        },
+      },
+      { upsert: true }
+    );
+    seededMsgCount++;
+  }
+
+  // Welcome Campaign messages (10 contacts, failed status)
+  const c5Contacts = contactDocs.slice(25, 35);
+  for (let i = 0; i < c5Contacts.length; i++) {
+    const c = c5Contacts[i];
+    const messageId = `msg_seed_c5_${c._id}`;
+
+    await Message.findOneAndUpdate(
+      { messageId },
+      {
+        $set: {
+          messageId,
+          userId: demoUser._id,
+          campaignId: campaign5._id,
+          recipient: c.phone,
+          message: campaign5.message,
+          status: "FAILED",
+          provider: "DUMMY",
+          errorMessage: "Provider gateway error",
+        },
+      },
+      { upsert: true }
+    );
+    seededMsgCount++;
+  }
+
+  console.log(`✓ ${seededMsgCount} message log records seeded`);
+
+  console.log("\n==========================================");
+  console.log("🎉 SEEDING COMPLETED SUCCESSFULLY!");
+  console.log(`   Contacts:  ${contactDocs.length}`);
+  console.log("   Groups:    5");
+  console.log("   Campaigns: 5");
+  console.log(`   Messages:  ${seededMsgCount}`);
+  console.log("==========================================");
+
   await mongoose.disconnect();
-  console.log("🔌 Disconnected from MongoDB Atlas cleanly");
+  console.log("🔌 Disconnected from MongoDB cleanly");
   process.exit(0);
 }
 

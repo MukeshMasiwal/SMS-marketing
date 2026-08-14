@@ -2,10 +2,25 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyToken } from './lib/auth/jwt'
 
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/admin',
+  '/contacts',
+  '/groups',
+  '/campaigns',
+  '/messages',
+  '/analytics',
+  '/packages',
+  '/settings',
+]
+
 export async function proxy(request: NextRequest) {
-  // Protect /dashboard and /admin routes
   const { pathname } = request.nextUrl
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
+  )
+
+  if (isProtected) {
     const token = request.cookies.get('token')?.value
 
     if (!token) {
@@ -26,5 +41,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/contacts/:path*',
+    '/groups/:path*',
+    '/campaigns/:path*',
+    '/messages/:path*',
+    '/analytics/:path*',
+    '/packages/:path*',
+    '/settings/:path*',
+  ],
 }
