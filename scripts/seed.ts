@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import serverMongoose from "../server/node_modules/mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import path from "path";
@@ -77,9 +76,6 @@ async function seed() {
 
   console.log("🔄 Attempting MongoDB connection...");
   const conn = await mongoose.connect(MONGODB_URI);
-  if (serverMongoose !== mongoose && serverMongoose.connection?.readyState !== 1) {
-    await serverMongoose.connect(MONGODB_URI);
-  }
   const dbName = conn.connection.db?.databaseName || conn.connection.name || "sms-marketing";
   console.log(`✅ MongoDB connected (${dbName})`);
 

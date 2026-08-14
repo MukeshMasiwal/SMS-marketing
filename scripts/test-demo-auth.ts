@@ -1,10 +1,9 @@
 import dotenv from "dotenv";
 import path from "path";
 import mongoose from "mongoose";
-import serverMongoose from "../server/node_modules/mongoose";
 import bcrypt from "bcryptjs";
-import express from "../server/node_modules/express";
-import cookieParser from "../server/node_modules/cookie-parser";
+import express from "express";
+import cookieParser from "cookie-parser";
 import { Server } from "http";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
@@ -24,9 +23,6 @@ async function runDemoAuthTests() {
   }
 
   await mongoose.connect(MONGODB_URI);
-  if (serverMongoose !== mongoose && serverMongoose.connection?.readyState !== 1) {
-    await serverMongoose.connect(MONGODB_URI);
-  }
   console.log("✅ Connected to MongoDB");
 
   // Spin up temporary local Express instance to test actual API route pipeline
