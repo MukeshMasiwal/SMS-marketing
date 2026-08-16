@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    if (pathname.startsWith('/admin') && session.role !== 'ADMIN') {
+    if (pathname.startsWith('/admin') && (session.role || '').toUpperCase() !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

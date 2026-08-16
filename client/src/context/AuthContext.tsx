@@ -68,8 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(data.error?.message || "Invalid credentials.");
     }
 
-    setUser(data.user);
-    return data.user;
+    const authenticatedUser = data.user || data.data?.user;
+    setUser(authenticatedUser);
+    return authenticatedUser;
   };
 
   const signup = async (name: string, email: string, password: string, company?: string) => {

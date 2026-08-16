@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ensureDemoAccountsSeeded } from "./seed-utils";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -20,10 +21,10 @@ export async function connectToDatabase() {
 
   if (!MONGODB_URI) {
     console.error(
-      "❌ MongoDB connection failed: MONGODB_URI environment variable is missing in .env.local"
+      "❌ MongoDB connection failed: MONGODB_URI environment variable is missing"
     );
     throw new Error(
-      "Please define the MONGODB_URI environment variable inside .env.local"
+      "Please define the MONGODB_URI environment variable"
     );
   }
 
@@ -36,18 +37,28 @@ export async function connectToDatabase() {
     console.log("🔗 Connecting to MongoDB Atlas...");
 
     const opts = {
-      bufferCommands: false,
       serverSelectionTimeoutMS: 5000,
     };
 
     cached.promise = mongoose
       .connect(MONGODB_URI, opts)
-      .then((mongooseInstance) => {
+      .then(async (mongooseInstance) => {
         const dbName =
           mongooseInstance.connection.db?.databaseName ||
           mongooseInstance.connection.name ||
           "sms-marketing";
         console.log(`✅ MongoDB Atlas connected (${dbName})`);
+
+        // Connect secondary server mongoose instance if present in local dev directory
+        try {
+          const serverMongoose = require("../../server/node_modules/mongoose");
+          if (serverMongoose && serverMongoose !== mongooseInstance && serverMongoose.connection?.readyState !== 1) {
+            await serverMongoose.connect(MONGODB_URI, opts);
+          }
+        } catch {
+          // Safe fallback for clean production / Vercel environment
+        }
+
         return mongooseInstance;
       })
       .catch((error: unknown) => {
@@ -61,6 +72,12 @@ export async function connectToDatabase() {
 
   try {
     cached.conn = await cached.promise;
+    // Ensure demo accounts exist idempotently in production MongoDB (non-blocking safety)
+    try {
+      await ensureDemoAccountsSeeded();
+    } catch (seedErr: any) {
+      console.warn(`⚠️ Non-fatal demo account seed warning: ${seedErr?.message || seedErr}`);
+    }
     return cached.conn;
   } catch (error) {
     cached.promise = null;

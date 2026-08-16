@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
       return createErrorResponse("Invalid credentials", "INVALID_CREDENTIALS", 401);
     }
 
+    if (!user.emailVerified) {
+      return createErrorResponse("Please verify your email before logging in", "EMAIL_NOT_VERIFIED", 403);
+    }
+
     // Create session token
     const token = await createToken({
       userId: user._id.toString(),
@@ -62,7 +66,8 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch {
-    return createErrorResponse("Failed to login", "INTERNAL_ERROR", 500);
+  } catch (err: any) {
+    console.error("❌ Login route error:", err);
+    return createErrorResponse(err?.message || "Failed to login", "INTERNAL_ERROR", 500);
   }
 }

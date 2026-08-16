@@ -39,7 +39,8 @@ export async function requireRole(req: NextRequest, role: "USER" | "ADMIN") {
   const auth = await requireAuth(req);
   if (auth.error) return auth;
 
-  if (auth.session!.role !== role && auth.session!.role !== "ADMIN") {
+  const userRole = (auth.session!.role || "").toUpperCase();
+  if (userRole !== role.toUpperCase() && userRole !== "ADMIN") {
     return { error: "Forbidden", status: 403 };
   }
 

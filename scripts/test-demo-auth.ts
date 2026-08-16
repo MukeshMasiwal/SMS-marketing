@@ -7,7 +7,9 @@ import cookieParser from "cookie-parser";
 import { Server } from "http";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config();
 
+import { connectToDatabase } from "../lib/db/connection";
 import { User } from "../server/models/User";
 import { Session } from "../server/models/Session";
 import { Otp } from "../server/models/Otp";
@@ -22,7 +24,7 @@ async function runDemoAuthTests() {
     process.exit(1);
   }
 
-  await mongoose.connect(MONGODB_URI);
+  await connectToDatabase();
   console.log("✅ Connected to MongoDB");
 
   // Spin up temporary local Express instance to test actual API route pipeline

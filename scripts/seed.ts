@@ -3,15 +3,18 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import path from "path";
 
-// Load environment variables from .env.local
+// Load environment variables (.env.local if present, or existing environment)
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config();
 
+import { connectToDatabase } from "../lib/db/connection";
 import { Package } from "../lib/db/models/Package";
 import { User } from "../lib/db/models/User";
 import { Contact } from "../lib/db/models/Contact";
 import { Group } from "../lib/db/models/Group";
 import { Campaign } from "../lib/db/models/Campaign";
 import { Message } from "../lib/db/models/Message";
+import { seedDemoUser } from "../lib/db/seed-utils";
 
 const DEFAULT_PACKAGES = [
   {
@@ -68,16 +71,8 @@ const DEMO_NAMES = [
 ];
 
 async function seed() {
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) {
-    console.error("❌ Error: MONGODB_URI environment variable is missing in .env.local");
-    process.exit(1);
-  }
-
-  console.log("🔄 Attempting MongoDB connection...");
-  const conn = await mongoose.connect(MONGODB_URI);
-  const dbName = conn.connection.db?.databaseName || conn.connection.name || "sms-marketing";
-  console.log(`✅ MongoDB connected (${dbName})`);
+  console.log("🔄 Connecting to MongoDB...");
+  await connectToDatabase();
 
   // 1. Seed Packages
   console.log("\nSeeding packages...");
@@ -92,57 +87,19 @@ async function seed() {
   }
   console.log(`✓ ${Object.keys(packageDocs).length} packages ready`);
 
-  // Helper function for idempotent demo user seeding
-  async function seedDemoAccount(
-    email: string,
-    name: string,
-    rawPass: string,
-    targetRole: "user" | "admin",
-    defaultSmsUsed: number
-  ) {
-    const existing = await User.findOne({ email: email.toLowerCase() });
-    let passwordHash = "";
-    if (existing && existing.passwordHash) {
-      const isValid = await bcrypt.compare(rawPass, existing.passwordHash);
-      if (isValid) {
-        passwordHash = existing.passwordHash;
-      } else {
-        passwordHash = await bcrypt.hash(rawPass, 10);
-      }
-    } else {
-      passwordHash = await bcrypt.hash(rawPass, 10);
-    }
-
-    const doc = await User.findOneAndUpdate(
-      { email: email.toLowerCase() },
-      {
-        $set: {
-          name,
-          email: email.toLowerCase(),
-          passwordHash,
-          role: existing ? existing.role : targetRole,
-          emailVerified: true,
-          packageId: packageDocs["Free"]?._id,
-          smsUsed: existing?.smsUsed ?? defaultSmsUsed,
-          isActive: true,
-        },
-      },
-      { upsert: true, returnDocument: "after" }
-    );
-
-    console.log(`✓ Seeded ${name} (${doc.email}): role=${doc.role}, emailVerified=${doc.emailVerified}`);
-    return doc;
-  }
-
   // 3. Seed Admin User
   console.log("\nSeeding admin account...");
   const adminEmail = "admin@example.com";
-  const adminUser = await seedDemoAccount(adminEmail, "Demo Admin", "Admin@12345", "admin", 0);
+  const adminUser = await seedDemoUser(adminEmail, "Demo Admin", "Admin@12345", "admin", 0, packageDocs["Free"]?._id);
 
   // 4. Seed Normal User
   console.log("Seeding demo normal user account...");
   const userEmail = "user@example.com";
-  const demoUser = await seedDemoAccount(userEmail, "Demo User", "User@12345", "user", 25);
+  const demoUser = await seedDemoUser(userEmail, "Demo User", "User@12345", "user", 25, packageDocs["Free"]?._id);
+
+  if (!adminUser || !demoUser) {
+    throw new Error("Failed to seed admin or demo user");
+  }
 
   // 5. Seed 40 Demo Contacts (+919800000001 through +919800000040)
   console.log("\nSeeding 40 realistic demo contacts...");
