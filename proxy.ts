@@ -12,6 +12,8 @@ const PROTECTED_PREFIXES = [
   '/analytics',
   '/packages',
   '/settings',
+  '/profile',
+  '/account',
 ]
 
 export async function proxy(request: NextRequest) {
@@ -51,5 +53,7 @@ export const config = {
     '/analytics/:path*',
     '/packages/:path*',
     '/settings/:path*',
+    '/profile/:path*',
+    '/account/:path*',
   ],
 }

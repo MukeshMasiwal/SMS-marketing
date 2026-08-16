@@ -86,11 +86,11 @@ export async function signup(req: Request, res: Response) {
       });
     }
 
-    // Validate password (min 8 chars)
-    if (password.length < 8) {
+    // Validate password (8 to 64 chars)
+    if (password.length < 8 || password.length > 64) {
       return res.status(400).json({
         success: false,
-        error: { message: "Password must be at least 8 characters long." },
+        error: { message: "Password must be between 8 and 64 characters." },
       });
     }
 

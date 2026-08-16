@@ -14,7 +14,7 @@ export function AdminLogoutButton({ className }: AdminLogoutButtonProps) {
     } catch (error) {
       console.error("Logout failed", error);
     } finally {
-      window.location.href = "/";
+      window.location.href = "/login";
     }
   };
 
