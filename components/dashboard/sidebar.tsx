@@ -10,7 +10,8 @@ import {
   MessageSquare, 
   BarChart3, 
   Package, 
-  Settings 
+  Settings,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Groups", href: "/groups", icon: Tags },
+  { name: "Templates", href: "/templates", icon: FileText },
   { name: "Campaigns", href: "/campaigns", icon: Megaphone },
   { name: "Messages", href: "/messages", icon: MessageSquare },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },

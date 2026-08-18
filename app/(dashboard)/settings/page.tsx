@@ -123,7 +123,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs Header */}
-      <div className="flex border-b border-zinc-800 gap-2 overflow-x-auto pb-px">
+      <div className="w-full min-w-0 flex border-b border-zinc-800 gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab("profile")}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all cursor-pointer whitespace-nowrap ${
@@ -175,13 +175,13 @@ export default function SettingsPage() {
 
       {/* Tab 1: Profile */}
       {activeTab === "profile" && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-6">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
             <div>
               <h2 className="text-lg font-semibold text-zinc-100">Personal & Account Information</h2>
               <p className="text-xs text-zinc-400">Update your account name and organization details.</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
                 role === "ADMIN" 
                   ? "bg-purple-500/10 text-purple-400 border-purple-500/20" 
@@ -460,7 +460,7 @@ export default function SettingsPage() {
                 <span>API Endpoint Usage</span>
               </div>
               <p className="text-xs text-zinc-400 font-mono bg-zinc-950 p-2.5 rounded border border-zinc-800">
-                POST /api/internal/sms
+                POST /api/sms/exotel/send
               </p>
               <p className="text-xs text-zinc-500">
                 Pass your authentication bearer token in header: <code className="text-zinc-400">Authorization: Bearer &lt;token&gt;</code>

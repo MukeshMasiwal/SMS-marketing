@@ -6,7 +6,10 @@ import { verifyToken } from "./jwt";
 export * from "./jwt";
 
 export async function requireAuth(req: NextRequest) {
-  const token = req.cookies.get("token")?.value || req.headers.get("authorization")?.split(" ")[1];
+  const token =
+    req.cookies.get("accessToken")?.value ||
+    req.cookies.get("token")?.value ||
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
   if (!token) {
     return { error: "Unauthorized", status: 401 };
@@ -35,14 +38,16 @@ export async function requireAuth(req: NextRequest) {
   return { session };
 }
 
-export async function requireRole(req: NextRequest, role: "USER" | "ADMIN") {
+export async function requireRole(req: NextRequest, role: "USER" | "ADMIN" | "SUPER_ADMIN") {
   const auth = await requireAuth(req);
   if (auth.error) return auth;
 
   const userRole = (auth.session!.role || "").toUpperCase();
-  if (userRole !== role.toUpperCase() && userRole !== "ADMIN") {
-    return { error: "Forbidden", status: 403 };
-  }
+  const targetRole = role.toUpperCase();
 
-  return auth;
+  if (userRole === "SUPER_ADMIN") return auth;
+  if (targetRole === "ADMIN" && userRole === "ADMIN") return auth;
+  if (targetRole === "USER") return auth;
+
+  return { error: "Forbidden", status: 403 };
 }

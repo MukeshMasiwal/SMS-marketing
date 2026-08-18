@@ -6,7 +6,7 @@ export interface UserProfile {
   name: string;
   email: string;
   company?: string;
-  role: "user" | "admin" | "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPER_ADMIN" | "user" | "admin" | "super_admin";
   emailVerified: boolean;
 }
 

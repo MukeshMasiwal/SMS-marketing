@@ -321,17 +321,17 @@ export function ImportContactsDialog({
               {/* Preview Section */}
               {parseResult && parseResult.success && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-emerald-400">{parseResult.summary.validRows}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-zinc-900 border border-zinc-800 p-2.5 sm:p-3 rounded-lg text-center">
+                      <div className="text-xl sm:text-2xl font-bold text-emerald-400">{parseResult.summary.validRows}</div>
                       <div className="text-xs text-zinc-400 font-medium">Valid Contacts</div>
                     </div>
-                    <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-amber-400">{parseResult.summary.duplicateRows}</div>
+                    <div className="bg-zinc-900 border border-zinc-800 p-2.5 sm:p-3 rounded-lg text-center">
+                      <div className="text-xl sm:text-2xl font-bold text-amber-400">{parseResult.summary.duplicateRows}</div>
                       <div className="text-xs text-zinc-400 font-medium">In-file Duplicates</div>
                     </div>
-                    <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-red-400">{parseResult.summary.invalidRows}</div>
+                    <div className="bg-zinc-900 border border-zinc-800 p-2.5 sm:p-3 rounded-lg text-center">
+                      <div className="text-xl sm:text-2xl font-bold text-red-400">{parseResult.summary.invalidRows}</div>
                       <div className="text-xs text-zinc-400 font-medium">Invalid Rows</div>
                     </div>
                   </div>

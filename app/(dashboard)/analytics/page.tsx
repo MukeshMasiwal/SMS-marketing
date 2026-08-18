@@ -191,9 +191,9 @@ export default function AnalyticsPage() {
       </div>
       
       {/* Charts Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 w-full min-w-0">
         {/* Delivery Status Donut Chart */}
-        <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-6 backdrop-blur-xl flex flex-col min-h-[400px]">
+        <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-4 sm:p-6 backdrop-blur-xl flex flex-col min-h-[400px] w-full min-w-0">
           <h3 className="text-lg font-medium text-zinc-100 mb-6">Delivery Status Breakdown</h3>
           
           {summary.totalMessages === 0 ? (
@@ -201,15 +201,15 @@ export default function AnalyticsPage() {
               No message data available
             </div>
           ) : (
-            <div className="flex-1 relative min-h-[300px]">
+            <div className="flex-1 relative min-h-[300px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={deliveryStatus}
                     cx="50%"
                     cy="50%"
-                    innerRadius={80}
-                    outerRadius={110}
+                    innerRadius={70}
+                    outerRadius={100}
                     paddingAngle={2}
                     dataKey="value"
                     stroke="rgba(0,0,0,0)"
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
               {/* Center Text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -mt-8">
-                <span className="text-3xl font-bold text-zinc-100">{summary.totalMessages}</span>
+                <span className="text-2xl sm:text-3xl font-bold text-zinc-100">{summary.totalMessages}</span>
                 <span className="text-xs text-zinc-400 uppercase tracking-wider">Messages</span>
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function AnalyticsPage() {
         </div>
         
         {/* Messages Over Time Chart */}
-        <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-6 backdrop-blur-xl flex flex-col min-h-[400px]">
+        <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-4 sm:p-6 backdrop-blur-xl flex flex-col min-h-[400px] w-full min-w-0">
           <h3 className="text-lg font-medium text-zinc-100 mb-6">Message Volume (Last 30 Days)</h3>
           
           {summary.totalMessages === 0 ? (
@@ -243,20 +243,20 @@ export default function AnalyticsPage() {
               No message data available
             </div>
           ) : (
-            <div className="flex-1 min-h-[300px]">
+            <div className="flex-1 min-h-[300px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={formattedMessagesOverTime} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                   <XAxis 
                     dataKey="formattedDate" 
                     stroke="#52525b" 
-                    fontSize={12} 
+                    fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
-                    minTickGap={20}
+                    minTickGap={25}
                   />
                   <YAxis 
                     stroke="#52525b" 
-                    fontSize={12} 
+                    fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
                     tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(1)}k` : value}
@@ -277,7 +277,7 @@ export default function AnalyticsPage() {
         </div>
         
         {/* Campaign Performance Bar Chart */}
-        <div className="md:col-span-2 rounded-xl border border-white/10 bg-zinc-950/50 p-6 backdrop-blur-xl flex flex-col min-h-[400px]">
+        <div className="md:col-span-2 rounded-xl border border-white/10 bg-zinc-950/50 p-4 sm:p-6 backdrop-blur-xl flex flex-col min-h-[400px] w-full min-w-0">
           <h3 className="text-lg font-medium text-zinc-100 mb-6">Recent Campaigns Performance</h3>
           
           {campaignPerformance.length === 0 ? (
@@ -285,20 +285,21 @@ export default function AnalyticsPage() {
               No recent campaigns with message data
             </div>
           ) : (
-            <div className="flex-1 min-h-[300px]">
+            <div className="flex-1 min-h-[300px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={campaignPerformance} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                   <XAxis 
                     dataKey="name" 
                     stroke="#52525b" 
-                    fontSize={12} 
+                    fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
-                    tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 15)}...` : value}
+                    minTickGap={15}
+                    tickFormatter={(value) => value.length > 10 ? `${value.substring(0, 10)}...` : value}
                   />
                   <YAxis 
                     stroke="#52525b" 
-                    fontSize={12} 
+                    fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
                   />

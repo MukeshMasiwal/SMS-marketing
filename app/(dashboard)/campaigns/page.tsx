@@ -141,7 +141,7 @@ export default function CampaignsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Campaigns</h1>
           <p className="text-zinc-400 mt-1">Manage and send SMS marketing campaigns.</p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button onClick={openAddGroupDialog} variant="outline" className="border-zinc-800 bg-zinc-900 text-zinc-100 hover:bg-zinc-800">
             <UsersRound className="mr-2 h-4 w-4 text-indigo-400" />
             + Add Group

@@ -127,7 +127,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <ImportContactsDialog 
               groupId={groupId}
               groupName={group?.name}

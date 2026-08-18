@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   company?: string;
-  role: "user" | "admin" | "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPER_ADMIN";
   emailVerified: boolean;
   packageId?: mongoose.Types.ObjectId;
   smsUsed: number;
@@ -29,9 +29,16 @@ const UserSchema = new Schema<IUser>(
     company: { type: String, trim: true },
     role: {
       type: String,
-      enum: ["user", "admin", "USER", "ADMIN"],
-      default: "user",
-      set: (v: string) => (v ? (v.toLowerCase() as "user" | "admin") : "user"),
+      enum: ["USER", "ADMIN", "SUPER_ADMIN", "user", "admin", "super_admin"],
+      default: "USER",
+      set: (v: string) => {
+        if (!v) return "USER";
+        const upper = v.trim().toUpperCase();
+        if (upper === "SUPER_ADMIN" || upper === "ADMIN" || upper === "USER") {
+          return upper;
+        }
+        return "USER";
+      },
     },
     emailVerified: { type: Boolean, default: false },
     packageId: { type: Schema.Types.ObjectId, ref: "Package" },

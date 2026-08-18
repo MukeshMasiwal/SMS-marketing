@@ -72,7 +72,7 @@ export default async function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <div className="flex flex-col flex-1 w-full overflow-hidden">
+      <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
         {/* Mobile Header */}
         <header className="flex h-16 items-center gap-4 border-b border-white/10 bg-black px-4 md:hidden">
           <AdminMobileNav />
@@ -81,8 +81,8 @@ export default async function AdminLayout({
           </div>
         </header>
         
-        <main className="flex-1 overflow-y-auto bg-black p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl h-full">
+        <main className="flex-1 w-full min-w-0 overflow-y-auto bg-black p-4 md:p-6 lg:p-8">
+          <div className="mx-auto max-w-6xl h-full min-w-0">
             {children}
           </div>
         </main>

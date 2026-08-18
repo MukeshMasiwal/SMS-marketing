@@ -112,7 +112,7 @@ export async function signup(req: Request, res: Response) {
       company,
       email: normalizedEmail,
       passwordHash,
-      role: "user",
+      role: "USER",
       emailVerified: false,
     });
 
@@ -738,6 +738,53 @@ export async function resetPassword(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       error: { message: "An error occurred while resetting password." },
+    });
+  }
+}
+
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    const userId = (req as any).user?.userId;
+    const { name, company, role, permissions } = req.body;
+
+    // Security Check: Users cannot manipulate their own role through profile update APIs
+    if (role !== undefined || permissions !== undefined) {
+      return res.status(403).json({
+        success: false,
+        error: { message: "Modifying account roles or permissions through profile updates is forbidden." },
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: { message: "User account not found." },
+      });
+    }
+
+    if (name) user.name = name.trim();
+    if (company !== undefined) user.company = company.trim();
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        role: user.role,
+        emailVerified: user.emailVerified,
+      },
+    });
+  } catch (err: any) {
+    console.error("Update profile error:", err);
+    return res.status(500).json({
+      success: false,
+      error: { message: err.message || "Failed to update profile." },
     });
   }
 }

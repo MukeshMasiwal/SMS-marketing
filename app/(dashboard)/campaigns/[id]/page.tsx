@@ -105,12 +105,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           <Button variant="ghost" onClick={() => window.location.href = "/campaigns"} className="mb-2 -ml-4 text-zinc-400 hover:text-zinc-100">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
               <Megaphone className="h-5 w-5" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{campaign.name}</h1>
-            <div className="ml-2">{getStatusBadge(campaign.status)}</div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 break-words">{campaign.name}</h1>
+            <div>{getStatusBadge(campaign.status)}</div>
           </div>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
       
-      <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-6 backdrop-blur-xl overflow-hidden flex flex-col min-h-[400px]">
+      <div className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950/50 p-4 sm:p-6 backdrop-blur-xl overflow-hidden flex flex-col min-h-[400px]">
         <h3 className="text-lg font-medium text-zinc-100 mb-4">Message Log</h3>
         
         {messages.length === 0 ? (
@@ -244,8 +244,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+            <div className="w-full min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[650px] text-sm text-left">
                 <thead className="text-xs text-zinc-400 bg-zinc-900/50 border-b border-white/10">
                   <tr>
                     <th className="px-4 py-3 font-medium">Recipient</th>

@@ -1,7 +1,5 @@
 import { SmsProvider } from "./types";
-import { DummySmsProvider } from "./dummy";
-
-// Optional: import { TwilioSmsProvider } from "./twilio";
+import { ExotelSmsProvider } from "./exotel";
 
 let providerInstance: SmsProvider | null = null;
 
@@ -10,22 +8,7 @@ export function getSmsProvider(): SmsProvider {
     return providerInstance;
   }
 
-  const providerType = process.env.SMS_PROVIDER || "dummy";
-
-  switch (providerType.toLowerCase()) {
-    case "dummy":
-      providerInstance = new DummySmsProvider();
-      break;
-    
-    // case "twilio":
-    //   providerInstance = new TwilioSmsProvider();
-    //   break;
-      
-    default:
-      console.warn(`Unknown SMS_PROVIDER '${providerType}'. Falling back to 'dummy'.`);
-      providerInstance = new DummySmsProvider();
-      break;
-  }
-
+  // Always use real Exotel SMS provider
+  providerInstance = new ExotelSmsProvider();
   return providerInstance;
 }

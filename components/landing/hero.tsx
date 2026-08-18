@@ -6,7 +6,7 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24">
       {/* Background glow decorator */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-indigo-600/15 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] max-w-full h-[350px] bg-indigo-600/15 blur-[120px] rounded-full pointer-events-none -z-10" />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center space-y-8">
         {/* Pill Badge */}

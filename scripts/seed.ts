@@ -14,7 +14,7 @@ import { Contact } from "../lib/db/models/Contact";
 import { Group } from "../lib/db/models/Group";
 import { Campaign } from "../lib/db/models/Campaign";
 import { Message } from "../lib/db/models/Message";
-import { seedDemoUser } from "../lib/db/seed-utils";
+import { seedDemoUser, seedDemoTemplates } from "../lib/db/seed-utils";
 
 const DEFAULT_PACKAGES = [
   {
@@ -87,19 +87,29 @@ async function seed() {
   }
   console.log(`✓ ${Object.keys(packageDocs).length} packages ready`);
 
+  // 2. Seed Super Admin User
+  console.log("\nSeeding Super Admin account...");
+  const superAdminEmail = "superadmin@example.com";
+  const superAdminUser = await seedDemoUser(superAdminEmail, "Demo Super Admin", "SuperAdmin@12345", "SUPER_ADMIN", 0, packageDocs["Free"]?._id);
+
   // 3. Seed Admin User
-  console.log("\nSeeding admin account...");
+  console.log("Seeding Admin account...");
   const adminEmail = "admin@example.com";
-  const adminUser = await seedDemoUser(adminEmail, "Demo Admin", "Admin@12345", "admin", 0, packageDocs["Free"]?._id);
+  const adminUser = await seedDemoUser(adminEmail, "Demo Admin", "Admin@12345", "ADMIN", 0, packageDocs["Free"]?._id);
 
   // 4. Seed Normal User
-  console.log("Seeding demo normal user account...");
+  console.log("Seeding Demo Normal User account...");
   const userEmail = "user@example.com";
-  const demoUser = await seedDemoUser(userEmail, "Demo User", "User@12345", "user", 25, packageDocs["Free"]?._id);
+  const demoUser = await seedDemoUser(userEmail, "Demo User", "User@12345", "USER", 25, packageDocs["Free"]?._id);
 
-  if (!adminUser || !demoUser) {
-    throw new Error("Failed to seed admin or demo user");
+  if (!superAdminUser || !adminUser || !demoUser) {
+    throw new Error("Failed to seed demo accounts");
   }
+
+  // 4.5 Seed 8 Demo Templates
+  console.log("\nSeeding 8 demo SMS templates...");
+  const createdTmplCount = await seedDemoTemplates(demoUser._id as mongoose.Types.ObjectId);
+  console.log(`✓ Demo SMS templates ready (${createdTmplCount} new created)`);
 
   // 5. Seed 40 Demo Contacts (+919800000001 through +919800000040)
   console.log("\nSeeding 40 realistic demo contacts...");

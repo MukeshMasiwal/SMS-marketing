@@ -82,8 +82,8 @@ export function CampaignsTable({ campaigns, onDelete, onSend, onCancel, onEdit }
 
   return (
     <>
-      <div className="rounded-xl border border-white/10 bg-zinc-950/50 backdrop-blur-xl overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950/50 backdrop-blur-xl overflow-hidden">
+        <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-[800px] text-sm text-left">
             <thead className="text-xs text-zinc-400 bg-zinc-900/50 border-b border-white/10">
               <tr>
@@ -121,12 +121,16 @@ export function CampaignsTable({ campaigns, onDelete, onSend, onCancel, onEdit }
                     <td className="px-6 py-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors cursor-pointer"
                           disabled={isProcessing === campaign._id}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[160px]">
+                          <DropdownMenuItem onClick={() => window.location.href = `/campaigns/${campaign._id}`}>
+                            <Eye className="mr-2 h-4 w-4 text-indigo-400" />
+                            View Details
+                          </DropdownMenuItem>
                           {isDraft && (
                             <>
                               <DropdownMenuItem onClick={() => onEdit(campaign)}>

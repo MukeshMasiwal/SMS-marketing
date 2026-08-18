@@ -10,6 +10,7 @@ import {
   getMe,
   forgotPassword,
   resetPassword,
+  updateProfile,
 } from "../controllers/authController";
 import { requireAuth } from "../middleware/auth";
 
@@ -24,6 +25,8 @@ router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.post("/logout-all", requireAuth, logoutAll);
 router.get("/me", requireAuth, getMe);
+router.put("/profile", requireAuth, updateProfile);
+router.patch("/profile", requireAuth, updateProfile);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 

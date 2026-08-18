@@ -49,16 +49,6 @@ export async function connectToDatabase() {
           "sms-marketing";
         console.log(`✅ MongoDB Atlas connected (${dbName})`);
 
-        // Connect secondary server mongoose instance if present in local dev directory
-        try {
-          const serverMongoose = require("../../server/node_modules/mongoose");
-          if (serverMongoose && serverMongoose !== mongooseInstance && serverMongoose.connection?.readyState !== 1) {
-            await serverMongoose.connect(MONGODB_URI, opts);
-          }
-        } catch {
-          // Safe fallback for clean production / Vercel environment
-        }
-
         return mongooseInstance;
       })
       .catch((error: unknown) => {

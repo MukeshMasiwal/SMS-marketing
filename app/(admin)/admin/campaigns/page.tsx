@@ -70,8 +70,8 @@ export default function AdminCampaignsPage() {
           <p className="text-destructive/80 mb-6">{error}</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 bg-zinc-950/50 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950/50 overflow-hidden">
+          <div className="w-full min-w-0 overflow-x-auto">
             <table className="w-full min-w-[800px] text-sm text-left">
               <thead className="bg-zinc-900/50 text-zinc-400 border-b border-white/10">
                 <tr>

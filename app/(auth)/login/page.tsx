@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Shield, Eye, EyeOff } from "lucide-react";
+import { User, Shield, Crown, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState<"user" | "admin" | null>(null);
+  const [demoLoading, setDemoLoading] = useState<"user" | "admin" | "super_admin" | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +36,7 @@ export default function LoginPage() {
       }
 
       const userRole = (data.data?.user?.role || "").toUpperCase();
-      const destination = userRole === "ADMIN" ? "/admin" : "/dashboard";
+      const destination = userRole === "SUPER_ADMIN" ? "/super-admin" : userRole === "ADMIN" ? "/admin" : "/dashboard";
 
       router.push(destination);
       router.refresh();
@@ -47,14 +47,13 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async (role: "USER" | "ADMIN") => {
+  const handleDemoLogin = async (role: "SUPER_ADMIN" | "ADMIN" | "USER") => {
     setError(null);
     setLoading(true);
-    setDemoLoading(role === "ADMIN" ? "admin" : "user");
+    setDemoLoading(role === "SUPER_ADMIN" ? "super_admin" : role === "ADMIN" ? "admin" : "user");
 
-    const demoEmail = role === "ADMIN" ? "admin@example.com" : "user@example.com";
-    const demoPassword = role === "ADMIN" ? "Admin@12345" : "User@12345";
-    const destination = role === "ADMIN" ? "/admin" : "/dashboard";
+    const demoEmail = role === "SUPER_ADMIN" ? "superadmin@example.com" : role === "ADMIN" ? "admin@example.com" : "user@example.com";
+    const demoPassword = role === "SUPER_ADMIN" ? "SuperAdmin@12345" : role === "ADMIN" ? "Admin@12345" : "User@12345";
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -68,6 +67,9 @@ export default function LoginPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error?.message || data.error || "Demo account is unavailable. Please run the seed command.");
       }
+
+      const userRole = (data.data?.user?.role || "").toUpperCase();
+      const destination = userRole === "SUPER_ADMIN" ? "/super-admin" : userRole === "ADMIN" ? "/admin" : "/dashboard";
 
       router.push(destination);
       router.refresh();
@@ -160,11 +162,11 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             disabled={loading}
-            onClick={() => handleDemoLogin("USER")}
-            className="w-full justify-center border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all font-medium py-2 rounded-lg"
+            onClick={() => handleDemoLogin("SUPER_ADMIN")}
+            className="w-full justify-center border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 transition-all font-medium py-2 rounded-lg"
           >
-            <User className="mr-2 h-4 w-4 text-indigo-400" />
-            {demoLoading === "user" ? "Logging in as Demo User..." : "Login as Demo User"}
+            <Crown className="mr-2 h-4 w-4 text-amber-400" />
+            {demoLoading === "super_admin" ? "Logging in as Super Admin..." : "Login as Super Admin"}
           </Button>
 
           <Button
@@ -172,10 +174,21 @@ export default function LoginPage() {
             variant="outline"
             disabled={loading}
             onClick={() => handleDemoLogin("ADMIN")}
-            className="w-full justify-center border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all font-medium py-2 rounded-lg"
+            className="w-full justify-center border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200 transition-all font-medium py-2 rounded-lg"
           >
             <Shield className="mr-2 h-4 w-4 text-purple-400" />
-            {demoLoading === "admin" ? "Logging in as Demo Admin..." : "Login as Demo Admin"}
+            {demoLoading === "admin" ? "Logging in as Demo Admin..." : "Login as Admin"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={() => handleDemoLogin("USER")}
+            className="w-full justify-center border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:text-indigo-200 transition-all font-medium py-2 rounded-lg"
+          >
+            <User className="mr-2 h-4 w-4 text-indigo-400" />
+            {demoLoading === "user" ? "Logging in as Demo User..." : "Login as User"}
           </Button>
         </div>
       </div>

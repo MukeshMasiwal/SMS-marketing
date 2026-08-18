@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,13 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IGroup } from "@/lib/db/models/Group";
 import { IContact } from "@/lib/db/models/Contact";
-import { Loader2, Users, Upload, Plus } from "lucide-react";
+import { Loader2, Users, Upload, Plus, FileText, Eye, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImportContactsDialog } from "@/components/messages/import-contacts-dialog";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
+import {
+  validateTemplateVariables,
+  renderMessageTemplate,
+  calculateSmsSegments,
+  TEMPLATE_VARIABLES,
+} from "@/lib/services/template-service";
 
 interface CampaignFormDialogProps {
   open: boolean;
@@ -50,10 +55,12 @@ export function CampaignFormDialog({
   // Data for selection
   const [groups, setGroups] = useState<any[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
 
   // Selections
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -62,17 +69,20 @@ export function CampaignFormDialog({
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [error, setError] = useState("");
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxChars = 1600;
 
   const fetchData = async () => {
     setIsLoadingData(true);
     try {
-      const [groupsRes, contactsRes] = await Promise.all([
-        fetch("/api/groups"),
-        fetch("/api/contacts"),
+      const [groupsRes, contactsRes, templatesRes] = await Promise.all([
+        fetch("/api/groups", { credentials: "include" }),
+        fetch("/api/contacts", { credentials: "include" }),
+        fetch("/api/templates", { credentials: "include" }),
       ]);
       const groupsData = await groupsRes.json();
       const contactsData = await contactsRes.json();
+      const templatesData = await templatesRes.json();
 
       if (groupsData.success) {
         setGroups(groupsData.data?.groups || groupsData.groups || []);
@@ -81,8 +91,11 @@ export function CampaignFormDialog({
         const rawContacts = contactsData.data?.contacts || contactsData.contacts || [];
         setContacts(rawContacts.filter((c: any) => c.status === "SUBSCRIBED"));
       }
+      if (templatesData.success) {
+        setTemplates(templatesData.data?.templates || []);
+      }
     } catch (err) {
-      console.error("Failed to load targets", err);
+      console.error("Failed to load campaign data", err);
     } finally {
       setIsLoadingData(false);
     }
@@ -91,6 +104,7 @@ export function CampaignFormDialog({
   useEffect(() => {
     if (open) {
       setError("");
+      setSelectedTemplateId("");
       if (campaign) {
         setName(campaign.name || "");
         setMessage(campaign.message || "");
@@ -109,7 +123,39 @@ export function CampaignFormDialog({
     }
   }, [open, campaign]);
 
-  // Recipient Count Calculation with Deduplication across groups
+  // Insert Variable at Cursor Position
+  const handleInsertVariable = (placeholder: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMessage((prev) => prev + placeholder);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const textBefore = message.substring(0, start);
+    const textAfter = message.substring(end);
+
+    const newMessage = textBefore + placeholder + textAfter;
+    setMessage(newMessage);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
+    }, 0);
+  };
+
+  // Handle Template Selection
+  const handleSelectTemplate = (templateId: string | null) => {
+    if (!templateId) return;
+    setSelectedTemplateId(templateId);
+    const selected = templates.find((t) => t._id === templateId);
+    if (selected) {
+      setMessage(selected.message);
+    }
+  };
+
+  // Recipient Count Calculation
   const recipientCount = useMemo(() => {
     if (targetType === "ALL") {
       return contacts.length;
@@ -136,6 +182,31 @@ export function CampaignFormDialog({
     return 0;
   }, [targetType, contacts, groups, selectedGroupIds, selectedContactIds]);
 
+  // Sample contact for preview
+  const previewContact = useMemo(() => {
+    if (targetType === "CONTACTS" && selectedContactIds.length > 0) {
+      const found = contacts.find((c) => String(c._id) === selectedContactIds[0]);
+      if (found) return found;
+    }
+    if (contacts.length > 0) return contacts[0];
+    return { name: "Rahul", phone: "9876543210" };
+  }, [targetType, selectedContactIds, contacts]);
+
+  // Real-time Variable Validation
+  const validation = useMemo(() => {
+    return validateTemplateVariables(message);
+  }, [message]);
+
+  // Live Rendered Campaign Preview
+  const renderedPreview = useMemo(() => {
+    return renderMessageTemplate(message, previewContact, { name: name || "Summer Sale" });
+  }, [message, previewContact, name]);
+
+  // Real-time Segment Info calculated on RENDERED PREVIEW
+  const segmentInfo = useMemo(() => {
+    return calculateSmsSegments(renderedPreview);
+  }, [renderedPreview]);
+
   const getFormData = () => {
     return {
       name,
@@ -149,6 +220,11 @@ export function CampaignFormDialog({
   const handleSave = async (isSendNow = false) => {
     if (!name.trim()) return setError("Campaign name is required");
     if (!message.trim()) return setError("Message is required");
+    if (!validation.valid) {
+      return setError(
+        `Unsupported variable(s): {{${validation.invalidVariables.join("}}, {{")}}}. Allowed variables are {{name}}, {{phone}}, and {{campaign_name}}.`
+      );
+    }
     if (targetType === "GROUP" && selectedGroupIds.length === 0) return setError("Select at least one group");
     if (targetType === "CONTACTS" && selectedContactIds.length === 0) return setError("Select at least one contact");
 
@@ -181,58 +257,159 @@ export function CampaignFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(val) => !isSubmitting && !isSending && onOpenChange(val)}>
-        <DialogContent className="sm:max-w-[650px] bg-zinc-950 text-zinc-100 border-zinc-800">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-zinc-950 text-zinc-100 border-zinc-800">
           <DialogHeader>
             <DialogTitle>{campaign ? "Edit Campaign" : "Create Campaign"}</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Compose your SMS message and select your target audience.
+            <DialogDescription className="text-zinc-400 text-xs">
+              Compose your SMS message, use templates with dynamic variables, and select target recipients.
             </DialogDescription>
           </DialogHeader>
 
           {error && (
-            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive border border-destructive/20">
-              {error}
+            <div className="rounded-xl bg-rose-950/40 p-3 text-xs text-rose-300 border border-rose-800/60 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="grid gap-6 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Campaign Name</Label>
+          <div className="grid gap-5 py-2">
+            {/* Campaign Name */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="name" className="text-xs font-semibold text-zinc-200">Campaign Name</Label>
               <Input
                 id="name"
                 placeholder="e.g. Summer Sale Announcement"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isSubmitting || isSending}
-                className="bg-zinc-900 border-zinc-800"
+                className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 text-sm focus-visible:ring-indigo-500"
               />
             </div>
 
+            {/* Load Saved Template Dropdown */}
+            {templates.length > 0 && (
+              <div className="grid gap-1.5 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/80">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-zinc-200 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Load Message Template</span>
+                  </Label>
+                  <span className="text-[11px] text-zinc-500">Loads raw template with variables</span>
+                </div>
+                <Select value={selectedTemplateId} onValueChange={handleSelectTemplate} disabled={isSubmitting || isSending}>
+                  <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200 text-xs h-9">
+                    <SelectValue placeholder="Select a saved template..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                    {templates.map((t) => (
+                      <SelectItem key={t._id} value={t._id} className="text-xs">
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Message & Variable Controls */}
             <div className="grid gap-2">
-              <div className="flex justify-between">
-                <Label htmlFor="message">Message</Label>
-                <span className={`text-xs ${message.length > maxChars ? "text-destructive" : "text-zinc-500"}`}>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="message" className="text-xs font-semibold text-zinc-200">
+                  Message Body
+                </Label>
+                <span className={`text-xs ${message.length > maxChars ? "text-rose-400 font-bold" : "text-zinc-500"}`}>
                   {message.length} / {maxChars} characters
                 </span>
               </div>
+
+              {/* Variable Buttons */}
+              <div className="flex flex-wrap gap-1.5 items-center p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs">
+                <span className="text-[11px] text-zinc-400 font-medium mr-1">Insert variable:</span>
+                {TEMPLATE_VARIABLES.map((v) => (
+                  <Button
+                    key={v.key}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleInsertVariable(v.placeholder)}
+                    disabled={isSubmitting || isSending}
+                    className="h-6 text-[11px] font-mono border-indigo-900/60 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60 hover:text-white px-2"
+                  >
+                    + {v.placeholder}
+                  </Button>
+                ))}
+              </div>
+
               <Textarea
+                ref={textareaRef}
                 id="message"
-                placeholder="Type your message here... Use {{name}} to personalize."
-                className="h-32 resize-none bg-zinc-900 border-zinc-800 text-zinc-100"
+                placeholder="Type your campaign message here... e.g. Hi {{name}}, welcome to {{campaign_name}}!"
+                className="h-28 resize-none bg-zinc-900 border-zinc-800 text-zinc-100 text-sm focus-visible:ring-indigo-500"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={isSubmitting || isSending}
               />
             </div>
 
-            {/* Recipient Selection Header */}
+            {/* Validation Warning */}
+            {!validation.valid && (
+              <div className="rounded-xl bg-rose-950/50 border border-rose-800/80 p-3 text-xs text-rose-200 space-y-1">
+                <div className="flex items-center gap-2 font-semibold text-rose-400">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Unsupported Variable Detected</span>
+                </div>
+                <p className="text-[11px] text-rose-300/90 leading-relaxed">
+                  The placeholder(s){" "}
+                  <strong className="font-mono text-white">
+                    {`{{${validation.invalidVariables.join("}}, {{")}}}`}
+                  </strong>{" "}
+                  are not supported. Only <code className="text-indigo-300">{"{{name}}"}</code>,{" "}
+                  <code className="text-indigo-300">{"{{phone}}"}</code>, and{" "}
+                  <code className="text-indigo-300">{"{{campaign_name}}"}</code> are permitted.
+                </p>
+              </div>
+            )}
+
+            {/* Live Personalized Campaign Preview */}
+            <div className="rounded-xl border border-indigo-900/40 bg-indigo-950/20 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between border-b border-indigo-900/40 pb-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
+                  <Eye className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Personalized Campaign Preview</span>
+                </div>
+                <span className="text-[10px] text-zinc-400">
+                  Sample recipient: <strong className="text-zinc-200">{previewContact.name}</strong> ({previewContact.phone})
+                </span>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-lg border border-zinc-800/80 text-xs text-zinc-100 whitespace-pre-wrap leading-relaxed min-h-[50px]">
+                {renderedPreview || <span className="text-zinc-500 italic">Preview will update as you type...</span>}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 gap-2">
+                <div className="flex items-center gap-3">
+                  <span>Characters: <strong className="text-zinc-200">{segmentInfo.charCount}</strong></span>
+                  <span>SMS Segments: <strong className="text-indigo-300">{segmentInfo.segmentCount}</strong></span>
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-mono">
+                    {segmentInfo.encoding}
+                  </span>
+                </div>
+                {segmentInfo.segmentCount > 1 && (
+                  <span className="text-amber-400 font-medium">
+                    Requires {segmentInfo.segmentCount} SMS credits / contact
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Recipient Selection */}
             <div className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
                 <div>
                   <Label className="text-sm font-semibold text-zinc-100">Recipients</Label>
                   <p className="text-xs text-zinc-400">Select audience segment or import new contacts.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     <Users className="h-3.5 w-3.5" />
                     {recipientCount.toLocaleString()} contacts
@@ -263,7 +440,7 @@ export function CampaignFormDialog({
               </div>
 
               {/* Target Type Selector */}
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label className="text-xs font-medium text-zinc-300">Target Type</Label>
                   <Select
@@ -358,7 +535,7 @@ export function CampaignFormDialog({
               type="button"
               variant="outline"
               onClick={() => handleSave(false)}
-              disabled={isSubmitting || isSending || isLoadingData}
+              disabled={isSubmitting || isSending || isLoadingData || !validation.valid}
               className="border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
             >
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -368,7 +545,7 @@ export function CampaignFormDialog({
               <Button
                 type="button"
                 onClick={() => handleSave(true)}
-                disabled={isSubmitting || isSending || isLoadingData}
+                disabled={isSubmitting || isSending || isLoadingData || !validation.valid}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               >
                 {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

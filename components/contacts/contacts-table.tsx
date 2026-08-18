@@ -60,7 +60,7 @@ export function ContactsTable({
 
   if (isLoading) {
     return (
-      <div className="rounded-md border border-zinc-800 overflow-x-auto">
+      <div className="w-full min-w-0 rounded-md border border-zinc-800 overflow-x-auto">
         <Table className="min-w-[600px]">
           <TableHeader className="bg-zinc-900/50">
             <TableRow className="border-zinc-800 hover:bg-transparent">
@@ -103,7 +103,7 @@ export function ContactsTable({
 
   return (
     <>
-      <div className="rounded-md border border-zinc-800 overflow-x-auto">
+      <div className="w-full min-w-0 rounded-md border border-zinc-800 overflow-x-auto">
         <Table className="min-w-[800px]">
           <TableHeader className="bg-zinc-900/50">
             <TableRow className="border-zinc-800 hover:bg-transparent">

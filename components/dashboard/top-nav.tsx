@@ -3,10 +3,10 @@ import { UserMenu } from "./user-menu";
 
 export function TopNav() {
   return (
-    <header className="flex h-16 items-center gap-4 border-b border-zinc-800 bg-zinc-950 px-4 md:px-6">
+    <header className="flex h-16 items-center justify-between gap-2 sm:gap-4 border-b border-zinc-800 bg-zinc-950 px-3 sm:px-6">
       <MobileNav />
-      <div className="w-full flex-1">
-        {/* Placeholder for future search bar or context title */}
+      <div className="flex-1 min-w-0">
+        {/* Placeholder for search or title */}
       </div>
       <UserMenu />
     </header>

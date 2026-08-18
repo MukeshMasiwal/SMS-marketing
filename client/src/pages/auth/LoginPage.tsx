@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { User, Shield, KeyRound, AlertCircle, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { User, Shield, Crown, AlertCircle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export const LoginPage: React.FC = () => {
@@ -13,6 +13,17 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
+  const redirectByRole = (userRole?: string) => {
+    const roleUpper = (userRole || "").toUpperCase();
+    if (roleUpper === "SUPER_ADMIN") {
+      window.location.href = "/super-admin";
+    } else if (roleUpper === "ADMIN") {
+      window.location.href = "/admin/users";
+    } else {
+      window.location.href = "/dashboard";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -22,8 +33,7 @@ export const LoginPage: React.FC = () => {
     try {
       const user = await login(email, password);
       toast.success(`Welcome back, ${user.name}!`);
-      const role = (user.role || "").toLowerCase();
-      window.location.href = role === "admin" ? "/admin" : "/dashboard";
+      redirectByRole(user.role);
     } catch (err: any) {
       if (err.emailVerified === false) {
         setUnverifiedEmail(err.email || email);
@@ -52,17 +62,24 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async (role: "USER" | "ADMIN") => {
+  const handleDemoLogin = async (role: "SUPER_ADMIN" | "ADMIN" | "USER") => {
     setError("");
     setLoading(true);
-    const demoEmail = role === "ADMIN" ? "admin@example.com" : "user@example.com";
-    const demoPassword = role === "ADMIN" ? "Admin@12345" : "User@12345";
+    let demoEmail = "user@example.com";
+    let demoPassword = "User@12345";
+
+    if (role === "SUPER_ADMIN") {
+      demoEmail = "superadmin@example.com";
+      demoPassword = "SuperAdmin@12345";
+    } else if (role === "ADMIN") {
+      demoEmail = "admin@example.com";
+      demoPassword = "Admin@12345";
+    }
 
     try {
       const user = await login(demoEmail, demoPassword);
-      toast.success(`Logged in as ${role === "ADMIN" ? "Admin" : "User"}`);
-      const userRole = (user.role || "").toLowerCase();
-      window.location.href = userRole === "admin" ? "/admin" : "/dashboard";
+      toast.success(`Logged in as ${role === "SUPER_ADMIN" ? "Super Admin" : role === "ADMIN" ? "Admin" : "User"}`);
+      redirectByRole(user.role);
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
     } finally {
@@ -150,25 +167,35 @@ export const LoginPage: React.FC = () => {
         {/* Demo Login Options */}
         <div className="space-y-3 pt-4 border-t border-zinc-800">
           <p className="text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">Demo Accounts</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => handleDemoLogin("USER")}
+              onClick={() => handleDemoLogin("SUPER_ADMIN")}
               disabled={loading}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-950 text-xs font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+              className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition-colors"
             >
-              <User className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Demo User</span>
+              <Crown className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>Login as Super Admin</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleDemoLogin("ADMIN")}
               disabled={loading}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-950 text-xs font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+              className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-medium transition-colors"
             >
-              <Shield className="h-3.5 w-3.5 text-purple-400" />
-              <span>Demo Admin</span>
+              <Shield className="h-4 w-4 text-purple-400 shrink-0" />
+              <span>Login as Admin</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("USER")}
+              disabled={loading}
+              className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium transition-colors"
+            >
+              <User className="h-4 w-4 text-indigo-400 shrink-0" />
+              <span>Login as User</span>
             </button>
           </div>
         </div>

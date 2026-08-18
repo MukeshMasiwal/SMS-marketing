@@ -171,7 +171,7 @@ export default function AdminPackagesPage() {
         
         <button 
           onClick={openCreateModal}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md font-medium transition-colors"
+          className="flex items-center justify-center gap-2 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md font-medium transition-colors cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           Create Package
@@ -266,7 +266,7 @@ export default function AdminPackagesPage() {
       {/* Create/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-zinc-950 border border-white/10 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-zinc-950 border border-white/10 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-zinc-900/50">
               <h2 className="text-lg font-semibold text-zinc-100">
                 {editingPkg ? "Edit Package" : "Create New Package"}

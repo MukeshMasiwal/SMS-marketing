@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Shield, LayoutDashboard, Users, Megaphone, Package, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AdminLogoutButton } from "./admin-logout-button";
@@ -17,9 +18,10 @@ const navigation = [
 
 export function AdminMobileNav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger className={cn(buttonVariants({ variant: "outline", size: "icon" }), "shrink-0 md:hidden bg-zinc-900 border-zinc-800 text-zinc-100 hover:bg-zinc-800")}>
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle admin menu</span>
@@ -40,10 +42,11 @@ export function AdminMobileNav() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-3 transition-all",
                   isActive
-                    ? "bg-indigo-600/10 text-indigo-400"
+                    ? "bg-indigo-600/10 text-indigo-400 font-semibold"
                     : "text-zinc-400 hover:text-zinc-100 active:bg-zinc-900"
                 )}
               >
@@ -55,7 +58,11 @@ export function AdminMobileNav() {
         </nav>
         
         <div className="p-4 border-t border-white/10 space-y-1">
-          <Link href="/" className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+          <Link 
+            href="/dashboard" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+          >
             <ArrowLeft className="h-4 w-4 shrink-0" />
             <span>Exit Admin</span>
           </Link>

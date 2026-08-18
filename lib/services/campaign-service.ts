@@ -6,6 +6,8 @@ import { Message } from "../db/models/Message";
 import { getSmsProvider } from "../providers/sms";
 import { reserveQuota, releaseQuota } from "./quota-service";
 
+import { renderMessageTemplate } from "./template-service";
+
 /**
  * Resolves, deduplicates, and filters recipients for a campaign.
  */
@@ -96,17 +98,20 @@ export async function executeCampaign(campaignId: string, userId: string): Promi
   campaign.recipientCount = recipients.length; // Final snapshot count
   await campaign.save();
 
-  // 3. Create Message records as QUEUED
+  // 3. Create Message records as QUEUED with per-recipient personalized message
   const messageRecords = await Message.insertMany(
-    recipients.map((recipient) => ({
-      messageId: `init_${new mongoose.Types.ObjectId().toString()}`, // Temporary ID until provider replaces it
-      userId,
-      campaignId,
-      recipient: recipient.phone,
-      message: campaign.message,
-      status: "QUEUED",
-      provider: "pending",
-    }))
+    recipients.map((recipient) => {
+      const personalizedMessage = renderMessageTemplate(campaign.message, recipient, campaign);
+      return {
+        messageId: `init_${new mongoose.Types.ObjectId().toString()}`,
+        userId,
+        campaignId,
+        recipient: recipient.phone,
+        message: personalizedMessage,
+        status: "QUEUED",
+        provider: "pending",
+      };
+    })
   );
 
   // 4. Send in controlled batches

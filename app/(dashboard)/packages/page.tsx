@@ -50,7 +50,7 @@ export default function PackagesPage() {
                 key={pkg._id} 
                 className={`relative flex flex-col rounded-3xl p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 group ${
                   isPopular 
-                    ? 'bg-gradient-to-b from-indigo-500/10 to-indigo-900/20 border-2 border-indigo-500/50 shadow-2xl shadow-indigo-500/20 z-10 scale-105'
+                    ? 'bg-gradient-to-b from-indigo-500/10 to-indigo-900/20 border-2 border-indigo-500/50 shadow-2xl shadow-indigo-500/20 z-10 md:scale-105'
                     : 'bg-zinc-900/40 border border-white/10 hover:border-white/20'
                 }`}
               >

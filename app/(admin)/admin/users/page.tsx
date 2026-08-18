@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserX, UserCheck, ShieldAlert, AlertCircle, Search } from "lucide-react";
+import { UserX, UserCheck, ShieldAlert, AlertCircle, Search, Lock, Crown } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 
@@ -43,7 +43,12 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  const toggleUserStatus = async (id: string, currentStatus: boolean, email: string) => {
+  const toggleUserStatus = async (id: string, currentStatus: boolean, email: string, role: string) => {
+    if (role === "SUPER_ADMIN") {
+      alert("Admins cannot modify Super Admin accounts.");
+      return;
+    }
+
     if (email === currentUserEmail && currentStatus) {
       alert("You cannot disable your own admin account.");
       return;
@@ -109,8 +114,8 @@ export default function AdminUsersPage() {
           <p className="text-destructive/80 mb-6">{error}</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 bg-zinc-950/50 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="w-full min-w-0 rounded-xl border border-white/10 bg-zinc-950/50 overflow-hidden">
+          <div className="w-full min-w-0 overflow-x-auto">
             <table className="w-full min-w-[800px] text-sm text-left">
               <thead className="bg-zinc-900/50 text-zinc-400 border-b border-white/10">
                 <tr>
@@ -130,50 +135,63 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <tr key={user._id} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-4 py-3 font-medium text-zinc-100">
-                        <Link href={`/admin/users/${user._id}`} className="hover:text-indigo-400 hover:underline">
-                          {user.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'ADMIN' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-zinc-800 text-zinc-400'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
-                          user.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-destructive/20 text-destructive'
-                        }`}>
-                          {user.isActive ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
-                          {user.isActive ? 'Active' : 'Disabled'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-zinc-500 whitespace-nowrap">
-                        {format(parseISO(user.createdAt), "MMM d, yyyy")}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => toggleUserStatus(user._id, user.isActive, user.email)}
-                          disabled={user.email === currentUserEmail && user.isActive}
-                          aria-label={user.isActive ? `Disable user ${user.email}` : `Enable user ${user.email}`}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                            user.email === currentUserEmail && user.isActive
-                              ? 'opacity-50 cursor-not-allowed border-white/5 text-zinc-500 bg-transparent'
-                              : user.isActive
-                                ? 'border-destructive/30 text-destructive hover:bg-destructive/10'
-                                : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                        >
-                          {user.isActive ? 'Disable' : 'Enable'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredUsers.map((user) => {
+                    const isSuperAdminTarget = (user.role || "").toUpperCase() === "SUPER_ADMIN";
+                    return (
+                      <tr key={user._id} className="hover:bg-white/5 transition-colors group">
+                        <td className="px-4 py-3 font-medium text-zinc-100">
+                          <Link href={`/admin/users/${user._id}`} className="hover:text-indigo-400 hover:underline">
+                            {user.name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">{user.email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            isSuperAdminTarget
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold'
+                              : user.role === 'ADMIN'
+                              ? 'bg-indigo-500/20 text-indigo-400'
+                              : 'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
+                            user.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-destructive/20 text-destructive'
+                          }`}>
+                            {user.isActive ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                            {user.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-500 whitespace-nowrap">
+                          {format(parseISO(user.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {isSuperAdminTarget ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                              <Lock className="h-3 w-3 text-amber-400" /> Protected
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => toggleUserStatus(user._id, user.isActive, user.email, user.role)}
+                              disabled={user.email === currentUserEmail && user.isActive}
+                              aria-label={user.isActive ? `Disable user ${user.email}` : `Enable user ${user.email}`}
+                              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                                user.email === currentUserEmail && user.isActive
+                                  ? 'opacity-50 cursor-not-allowed border-white/5 text-zinc-500 bg-transparent'
+                                  : user.isActive
+                                    ? 'border-destructive/30 text-destructive hover:bg-destructive/10'
+                                    : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                              }`}
+                            >
+                              {user.isActive ? 'Disable' : 'Enable'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

@@ -64,7 +64,7 @@ export default function GroupsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Groups</h1>
           <p className="text-zinc-400 mt-1">Organize your contacts into segments.</p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <ImportContactsDialog onImportSuccess={fetchGroups} />
           <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
             <Plus className="mr-2 h-4 w-4" />
@@ -73,8 +73,8 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center w-full">
+        <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
           <Input
             placeholder="Search groups by name..."

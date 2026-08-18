@@ -79,7 +79,7 @@ export function UserMenu() {
         <span className="sr-only">Toggle user menu</span>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56 bg-zinc-950 border-zinc-800 text-zinc-100 p-1.5 shadow-xl">
+      <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-1rem)] bg-zinc-950 border-zinc-800 text-zinc-100 p-1.5 shadow-xl">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal px-2 py-1.5">
             <div className="flex flex-col space-y-1">

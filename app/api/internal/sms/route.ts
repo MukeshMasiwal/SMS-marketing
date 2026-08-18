@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connection";
 import { Message } from "@/lib/db/models/Message";
-import { SendSmsSchema } from "@/lib/validations/sms";
+import { SendSmsSchema, normalizeIndianPhoneNumber } from "@/lib/validations/sms";
 import { getSmsProvider } from "@/lib/providers/sms";
 import { createErrorResponse, createSuccessResponse } from "@/lib/utils/api";
 
@@ -11,40 +11,44 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth(req);
     if (auth.error) return createErrorResponse(auth.error, "UNAUTHORIZED", auth.status);
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) return createErrorResponse("Invalid JSON body", "VALIDATION_ERROR", 400);
+
     const validatedData = SendSmsSchema.safeParse(body);
-    
     if (!validatedData.success) {
       return createErrorResponse(validatedData.error.issues[0].message, "VALIDATION_ERROR", 400);
     }
 
     const { recipient, message: messageContent } = validatedData.data;
 
-    // 1. Get the configured SMS provider (e.g. Dummy)
+    const normalizedPhone = normalizeIndianPhoneNumber(recipient);
+    if (!normalizedPhone) {
+      return createErrorResponse("Invalid Indian phone number format.", "VALIDATION_ERROR", 400);
+    }
+
     const provider = getSmsProvider();
+    const result = await provider.sendSms({ recipient: normalizedPhone, message: messageContent });
 
-    // 2. Call the provider to send the SMS
-    // The provider only handles simulation/network, it doesn't touch the DB.
-    const result = await provider.sendSms({ recipient, message: messageContent });
-
-    // 3. Connect to DB and save the Message log
     await connectToDatabase();
 
     await Message.create({
-      messageId: result.messageId || `failed_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      messageId: result.messageId || `exotel_fail_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       userId: auth.session!.userId,
-      campaignId: undefined, // Internal testing endpoint doesn't link to a campaign yet
-      recipient,
+      campaignId: undefined,
+      recipient: normalizedPhone,
       message: messageContent,
       status: result.status,
-      provider: result.provider,
+      provider: "exotel",
       errorMessage: result.errorMessage,
     });
 
-    // 4. Return the provider's result to the client
+    if (!result.success) {
+      return createErrorResponse(result.errorMessage || "Exotel SMS failed", "EXOTEL_SEND_FAILED", 400);
+    }
+
     return createSuccessResponse({ result }, 201);
   } catch (err) {
-    console.error(err);
-    return createErrorResponse("Failed to process internal SMS request", "INTERNAL_ERROR", 500);
+    console.error("Internal SMS Route Error:", err);
+    return createErrorResponse("Failed to process SMS request", "INTERNAL_ERROR", 500);
   }
 }
